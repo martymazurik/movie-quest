@@ -1,0 +1,39 @@
+# Netlify build config for MovieQuestApp (Flutter web)
+#
+# Netlify's default Ubuntu image has no Flutter SDK, so each build clones it.
+# To pin a specific version, change `-b stable` below to e.g. `-b 3.24.5`.
+
+[build]
+  publish = "build/web"
+  command = """
+    git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter && \
+    export PATH="$HOME/flutter/bin:$PATH" && \
+    flutter --version && \
+    flutter config --enable-web && \
+    flutter pub get && \
+    flutter build web --release
+  """
+
+[build.environment]
+  FLUTTER_WEB = "true"
+
+# Single-page app: any unknown path falls back to index.html so Flutter's
+# router can resolve it.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Production (main branch) → moviequest.martymazurik.com
+[context.production]
+  # Inherits the base [build] command. Add overrides here if needed, e.g.:
+  # environment = { FIREBASE_ENV = "prod" }
+
+# Staging (dev branch) → dev--<site-name>.netlify.app
+[context.dev]
+  # Same build for now. Override when you split Firebase projects, etc.
+
+# Deploy previews (PRs). Disable in Netlify UI if you don't want them
+# counting against build minutes.
+[context.deploy-preview]
+  # Same build.

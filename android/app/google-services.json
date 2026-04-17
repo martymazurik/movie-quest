@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "485865986449",
+    "project_id": "moviequestapp",
+    "storage_bucket": "moviequestapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:485865986449:android:f07a818bd2aee7e0e72230",
+        "android_client_info": {
+          "package_name": "com.martymazurik.moviequestapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPXCTPydf7KX9oi67jiYpdPxqzaUYDAc0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
