@@ -3,6 +3,7 @@ import '../models/movie.dart';
 import '../services/movie_service.dart';
 import '../services/user_service.dart';
 import '../widgets/movie_card.dart';
+import '../widgets/spin_movie_view.dart';
 import 'movie_form_screen.dart';
 import 'name_prompt_screen.dart';
 
@@ -20,6 +21,9 @@ class _MovieListScreenState extends State<MovieListScreen> {
   String _query = '';
   _SortMode _sort = _SortMode.recent;
   bool _hideWatched = false;
+  bool _spinMode = false;
+  final GlobalKey<SpinMovieViewState> _spinKey =
+      GlobalKey<SpinMovieViewState>();
 
   @override
   void dispose() {
@@ -65,6 +69,13 @@ class _MovieListScreenState extends State<MovieListScreen> {
     return list;
   }
 
+  List<Movie> _spinMovies(List<Movie> movies) {
+    if (_hideWatched) {
+      return movies.where((m) => m.watchDate == null).toList();
+    }
+    return movies;
+  }
+
   Future<void> _openForm({Movie? existing}) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -90,12 +101,119 @@ class _MovieListScreenState extends State<MovieListScreen> {
     );
   }
 
+  Widget _buildSpinToggle() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('spin', style: TextStyle(fontSize: 11)),
+          Directionality(
+            textDirection: TextDirection.rtl,
+            child: Transform.scale(
+              scale: 0.7,
+              child: Switch(
+                value: _spinMode,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged: (on) => setState(() => _spinMode = on),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildSearchBar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(60),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (v) => setState(() => _query = v),
+          decoration: InputDecoration(
+            hintText: 'Search title, actor, description…',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _query.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _query = '');
+                    },
+                  ),
+            filled: true,
+            isDense: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(24),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildSpinBanner() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(60),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF59D),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFFFC107), width: 2),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.star, color: Color(0xFFF57F17), size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'SPIN-THE-MOVIE',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: Color(0xFF5D4037),
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFC107),
+                  foregroundColor: Colors.black,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                onPressed: () => _spinKey.currentState?.triggerRandomSpin(),
+                child: const Text('SPIN!'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('MovieQuest'),
         actions: [
+          _buildSpinToggle(),
           IconButton(
             icon: Icon(
               _hideWatched ? Icons.visibility_off : Icons.visibility,
@@ -103,19 +221,20 @@ class _MovieListScreenState extends State<MovieListScreen> {
             tooltip: _hideWatched ? 'Showing unwatched only' : 'Hide watched',
             onPressed: () => setState(() => _hideWatched = !_hideWatched),
           ),
-          PopupMenuButton<_SortMode>(
-            icon: const Icon(Icons.sort),
-            tooltip: 'Sort',
-            initialValue: _sort,
-            onSelected: (m) => setState(() => _sort = m),
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: _SortMode.recent, child: Text('Recently added')),
-              PopupMenuItem(value: _SortMode.title, child: Text('Title A→Z')),
-              PopupMenuItem(value: _SortMode.ourRating, child: Text('Our rating')),
-              PopupMenuItem(value: _SortMode.externalRating, child: Text('External rating')),
-              PopupMenuItem(value: _SortMode.releaseYear, child: Text('Release year')),
-            ],
-          ),
+          if (!_spinMode)
+            PopupMenuButton<_SortMode>(
+              icon: const Icon(Icons.sort),
+              tooltip: 'Sort',
+              initialValue: _sort,
+              onSelected: (m) => setState(() => _sort = m),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: _SortMode.recent, child: Text('Recently added')),
+                PopupMenuItem(value: _SortMode.title, child: Text('Title A→Z')),
+                PopupMenuItem(value: _SortMode.ourRating, child: Text('Our rating')),
+                PopupMenuItem(value: _SortMode.externalRating, child: Text('External rating')),
+                PopupMenuItem(value: _SortMode.releaseYear, child: Text('Release year')),
+              ],
+            ),
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'change_name') _changeName();
@@ -125,41 +244,15 @@ class _MovieListScreenState extends State<MovieListScreen> {
             ],
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() => _query = v),
-              decoration: InputDecoration(
-                hintText: 'Search title, actor, description…',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                      ),
-                filled: true,
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+        bottom: _spinMode ? _buildSpinBanner() : _buildSearchBar(),
+      ),
+      floatingActionButton: _spinMode
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add),
+              label: const Text('Add movie'),
             ),
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add movie'),
-      ),
       body: StreamBuilder<List<Movie>>(
         stream: MovieService.watchAll(),
         builder: (context, snap) {
@@ -174,6 +267,10 @@ class _MovieListScreenState extends State<MovieListScreen> {
           }
           if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
+          if (_spinMode) {
+            final spinList = _spinMovies(snap.data!);
+            return SpinMovieView(key: _spinKey, movies: spinList);
           }
           final movies = _filterAndSort(snap.data!);
           if (movies.isEmpty) {
