@@ -211,7 +211,31 @@ class _MovieListScreenState extends State<MovieListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MovieQuest'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('MovieQuest'),
+            StreamBuilder<List<Movie>>(
+              stream: MovieService.watchAll(),
+              builder: (context, snap) {
+                final list = snap.data;
+                if (list == null) return const SizedBox.shrink();
+                final total = list.length;
+                final watched = list
+                    .where((m) => m.watchDate != null || m.ourRating > 0)
+                    .length;
+                return Text(
+                  'Movies $total / $watched',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
         actions: [
           _buildSpinToggle(),
           IconButton(
