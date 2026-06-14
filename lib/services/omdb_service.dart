@@ -17,9 +17,13 @@ class OmdbService {
       'https://www.omdbapi.com/?apikey=$_kOmdbApiKey&i=$imdbId',
     );
     final res = await http.get(uri);
-    if (res.statusCode != 200) return const [];
+    if (res.statusCode != 200) {
+      throw Exception('OMDb HTTP ${res.statusCode}');
+    }
     final data = jsonDecode(res.body) as Map<String, dynamic>;
-    if (data['Response'] == 'False') return const [];
+    if (data['Response'] == 'False') {
+      throw Exception('OMDb: ${data['Error'] ?? 'unknown error'}');
+    }
     final raw = (data['Awards'] as String?)?.trim() ?? '';
     if (raw.isEmpty || raw == 'N/A') return const [];
     return _parseAwards(raw);

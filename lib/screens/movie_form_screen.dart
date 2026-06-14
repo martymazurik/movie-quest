@@ -149,8 +149,12 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
           if (awards.isNotEmpty && _awards.text.trim().isEmpty) {
             setState(() => _awards.text = awards.join(', '));
           }
-        } catch (_) {
-          // Awards are best-effort; silently skip.
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Awards lookup: $e')),
+            );
+          }
         }
       }
     } catch (e) {

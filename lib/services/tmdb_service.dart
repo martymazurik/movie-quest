@@ -237,8 +237,6 @@ class TmdbService {
   static String? _pickHowToWatch(Map<String, dynamic> providersByRegion) {
     final us = providersByRegion['US'] as Map<String, dynamic>?;
     if (us == null) return null;
-    final flatrate = (us['flatrate'] as List?) ?? const [];
-    if (flatrate.isEmpty) return null;
     const presetAliases = <String, String>{
       'Netflix': 'Netflix',
       'Netflix Standard with Ads': 'Netflix',
@@ -248,6 +246,10 @@ class TmdbService {
       'HBO Max': 'HBOMax',
       'Max Amazon Channel': 'HBOMax',
     };
+    final flatrate = (us['flatrate'] as List?) ?? const [];
+    final rent = (us['rent'] as List?) ?? const [];
+    final buy = (us['buy'] as List?) ?? const [];
+
     for (final p in flatrate) {
       final name = (p as Map<String, dynamic>)['provider_name']?.toString();
       if (name == null) continue;
@@ -258,6 +260,13 @@ class TmdbService {
       final name = (p as Map<String, dynamic>)['provider_name']?.toString();
       if (name == null || name.isEmpty) continue;
       return _cleanProviderName(name);
+    }
+    for (final list in [rent, buy]) {
+      for (final p in list) {
+        final name = (p as Map<String, dynamic>)['provider_name']?.toString();
+        if (name == null || name.isEmpty) continue;
+        return '${_cleanProviderName(name)} (rent/buy)';
+      }
     }
     return null;
   }
