@@ -242,30 +242,29 @@ class TmdbService {
       'Netflix Standard with Ads': 'Netflix',
       'Amazon Prime Video': 'Prime',
       'Amazon Prime Video with Ads': 'Prime',
+      'Amazon Video': 'Prime',
       'Max': 'HBOMax',
       'HBO Max': 'HBOMax',
       'Max Amazon Channel': 'HBOMax',
     };
-    final flatrate = (us['flatrate'] as List?) ?? const [];
-    final rent = (us['rent'] as List?) ?? const [];
-    final buy = (us['buy'] as List?) ?? const [];
-
-    for (final p in flatrate) {
-      final name = (p as Map<String, dynamic>)['provider_name']?.toString();
-      if (name == null) continue;
-      final mapped = presetAliases[name];
-      if (mapped != null) return mapped;
+    final tiers = [
+      (us['flatrate'] as List?) ?? const [],
+      (us['rent'] as List?) ?? const [],
+      (us['buy'] as List?) ?? const [],
+    ];
+    for (final list in tiers) {
+      for (final p in list) {
+        final name = (p as Map<String, dynamic>)['provider_name']?.toString();
+        if (name == null) continue;
+        final mapped = presetAliases[name];
+        if (mapped != null) return mapped;
+      }
     }
-    for (final p in flatrate) {
-      final name = (p as Map<String, dynamic>)['provider_name']?.toString();
-      if (name == null || name.isEmpty) continue;
-      return _cleanProviderName(name);
-    }
-    for (final list in [rent, buy]) {
+    for (final list in tiers) {
       for (final p in list) {
         final name = (p as Map<String, dynamic>)['provider_name']?.toString();
         if (name == null || name.isEmpty) continue;
-        return '${_cleanProviderName(name)} (rent/buy)';
+        return _cleanProviderName(name);
       }
     }
     return null;
