@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/movie.dart';
 import '../services/movie_service.dart';
+import '../services/llm_awards_service.dart';
 import '../services/omdb_service.dart';
 import '../services/tmdb_service.dart';
 import '../services/user_service.dart';
@@ -142,9 +143,18 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
-      if (result.imdbId != null && OmdbService.isConfigured) {
+      if (result.imdbId != null) {
         try {
-          final awards = await OmdbService.fetchTopAwards(result.imdbId!);
+          var awards = OmdbService.isConfigured
+              ? await OmdbService.fetchTopAwards(result.imdbId!)
+              : <String>[];
+          if (awards.isEmpty && LlmAwardsService.isConfigured) {
+            awards = await LlmAwardsService.fetchTopAwards(
+              title: result.title,
+              year: result.releaseYear,
+              isTv: result.isTvSeries,
+            );
+          }
           if (!mounted) return;
           if (awards.isNotEmpty && _awards.text.trim().isEmpty) {
             setState(() => _awards.text = awards.join(', '));

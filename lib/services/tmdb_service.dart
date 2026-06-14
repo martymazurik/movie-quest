@@ -4,7 +4,7 @@ import '../models/movie.dart';
 
 const String _kTmdbApiKey = String.fromEnvironment(
   'TMDB_API_KEY',
-  defaultValue: 'e66c14358ca106a48327c18346a5ec13',
+  defaultValue: '',
 );
 
 const String _kTmdbImageBase = 'https://image.tmdb.org/t/p/w500';
@@ -61,9 +61,7 @@ class TmdbService {
   static final _tmdbMovieIdRegex = RegExp(r'/movie/(\d+)');
   static final _tmdbTvIdRegex = RegExp(r'/tv/(\d+)');
 
-  static bool get isConfigured =>
-      _kTmdbApiKey.isNotEmpty &&
-      _kTmdbApiKey != 'PASTE_YOUR_TMDB_V3_API_KEY_HERE';
+  static bool get isConfigured => _kTmdbApiKey.isNotEmpty;
 
   static Future<TmdbLookupResult> lookup(String input) async {
     if (!isConfigured) {
