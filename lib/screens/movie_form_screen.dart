@@ -28,6 +28,7 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
   DateTime? _watchDate;
   int _ourRating = 0;
   String? _howToWatchChoice;
+  String? _genre;
   bool _saving = false;
 
   static const _presetServices = ['Netflix', 'Prime', 'HBOMax'];
@@ -51,6 +52,7 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
     _thumbnailUrl = TextEditingController(text: m?.thumbnailUrl ?? '');
     _watchDate = m?.watchDate;
     _ourRating = m?.ourRating ?? 0;
+    _genre = (m?.genre != null && kImdbGenres.contains(m!.genre)) ? m.genre : null;
 
     final existingHtw = m?.howToWatch;
     if (existingHtw == null || existingHtw.isEmpty) {
@@ -127,6 +129,7 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
             ? null
             : _thumbnailUrl.text.trim(),
         howToWatch: howToWatch,
+        genre: _genre,
         enteredBy: widget.existing?.enteredBy.isNotEmpty == true
             ? widget.existing!.enteredBy
             : enteredBy,
@@ -306,6 +309,24 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            DropdownButtonFormField<String?>(
+              value: _genre,
+              decoration: const InputDecoration(
+                labelText: 'Genre',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('— None —'),
+                ),
+                ...kImdbGenres.map(
+                  (g) => DropdownMenuItem<String?>(value: g, child: Text(g)),
+                ),
+              ],
+              onChanged: (v) => setState(() => _genre = v),
+            ),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _awards,
               decoration: const InputDecoration(

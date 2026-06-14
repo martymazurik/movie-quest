@@ -22,6 +22,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
   _SortMode _sort = _SortMode.recent;
   bool _hideWatched = false;
   bool _spinMode = false;
+  String? _genreFilter;
   final GlobalKey<SpinMovieViewState> _spinKey =
       GlobalKey<SpinMovieViewState>();
 
@@ -37,6 +38,9 @@ class _MovieListScreenState extends State<MovieListScreen> {
     if (_hideWatched) {
       out = out.where((m) => m.watchDate == null);
     }
+    if (_genreFilter != null) {
+      out = out.where((m) => m.genre == _genreFilter);
+    }
     if (q.isNotEmpty) {
       out = out.where((m) {
         if (m.title.toLowerCase().contains(q)) return true;
@@ -44,6 +48,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
         if (m.actors.any((a) => a.toLowerCase().contains(q))) return true;
         if (m.awards.any((a) => a.toLowerCase().contains(q))) return true;
         if (m.enteredBy.toLowerCase().contains(q)) return true;
+        if ((m.genre ?? '').toLowerCase().contains(q)) return true;
         return false;
       });
     }
@@ -70,10 +75,14 @@ class _MovieListScreenState extends State<MovieListScreen> {
   }
 
   List<Movie> _spinMovies(List<Movie> movies) {
+    Iterable<Movie> out = movies;
     if (_hideWatched) {
-      return movies.where((m) => m.watchDate == null).toList();
+      out = out.where((m) => m.watchDate == null);
     }
-    return movies;
+    if (_genreFilter != null) {
+      out = out.where((m) => m.genre == _genreFilter);
+    }
+    return out.toList();
   }
 
   Future<void> _openForm({Movie? existing}) async {
@@ -245,6 +254,42 @@ class _MovieListScreenState extends State<MovieListScreen> {
             tooltip: _hideWatched ? 'Showing unwatched only' : 'Hide watched',
             onPressed: () => setState(() => _hideWatched = !_hideWatched),
           ),
+          PopupMenuButton<String?>(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.filter_list),
+                if (_genreFilter != null)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.amber,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            tooltip: _genreFilter == null
+                ? 'Filter by genre'
+                : 'Genre: $_genreFilter',
+            initialValue: _genreFilter,
+            onSelected: (v) => setState(() => _genreFilter = v),
+            itemBuilder: (_) => <PopupMenuEntry<String?>>[
+              const PopupMenuItem<String?>(
+                value: null,
+                child: Text('All genres'),
+              ),
+              const PopupMenuDivider(),
+              ...kImdbGenres.map(
+                (g) => PopupMenuItem<String?>(value: g, child: Text(g)),
+              ),
+            ],
+          ),
           if (!_spinMode)
             PopupMenuButton<_SortMode>(
               icon: const Icon(Icons.sort),
@@ -304,9 +349,11 @@ class _MovieListScreenState extends State<MovieListScreen> {
                 child: Text(
                   _query.isNotEmpty
                       ? 'No matches for "$_query".'
-                      : _hideWatched
-                          ? 'No unwatched movies. Toggle the eye icon to show watched.'
-                          : 'No movies yet. Tap "Add movie" to get started.',
+                      : _genreFilter != null
+                          ? 'No movies in genre "$_genreFilter". Clear the filter to see all.'
+                          : _hideWatched
+                              ? 'No unwatched movies. Toggle the eye icon to show watched.'
+                              : 'No movies yet. Tap "Add movie" to get started.',
                   textAlign: TextAlign.center,
                 ),
               ),

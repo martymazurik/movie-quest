@@ -1,5 +1,30 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+const List<String> kImdbGenres = [
+  'Action',
+  'Adventure',
+  'Animation',
+  'Biography',
+  'Comedy',
+  'Crime',
+  'Documentary',
+  'Drama',
+  'Family',
+  'Fantasy',
+  'Film-Noir',
+  'History',
+  'Horror',
+  'Music',
+  'Musical',
+  'Mystery',
+  'Romance',
+  'Sci-Fi',
+  'Sport',
+  'Thriller',
+  'War',
+  'Western',
+];
+
 class Movie {
   final String? id;
   final String title;
@@ -13,6 +38,7 @@ class Movie {
   final String? trailerUrl;
   final String? thumbnailUrl;
   final String? howToWatch;
+  final String? genre;
   final String enteredBy;
   final DateTime? enteredDate;
 
@@ -29,6 +55,7 @@ class Movie {
     required this.trailerUrl,
     required this.thumbnailUrl,
     required this.howToWatch,
+    required this.genre,
     required this.enteredBy,
     this.enteredDate,
   });
@@ -48,6 +75,7 @@ class Movie {
       trailerUrl: d['trailerUrl'] as String?,
       thumbnailUrl: d['thumbnailUrl'] as String?,
       howToWatch: d['howToWatch'] as String?,
+      genre: d['genre'] as String?,
       enteredBy: (d['enteredBy'] ?? '') as String,
       enteredDate: (d['enteredDate'] as Timestamp?)?.toDate(),
     );
@@ -66,6 +94,7 @@ class Movie {
       'trailerUrl': trailerUrl,
       'thumbnailUrl': thumbnailUrl,
       'howToWatch': howToWatch,
+      'genre': genre,
       'enteredBy': enteredBy,
       if (isNew) 'enteredDate': FieldValue.serverTimestamp(),
     };
@@ -83,6 +112,7 @@ class Movie {
     String? trailerUrl,
     String? thumbnailUrl,
     String? howToWatch,
+    String? genre,
     String? enteredBy,
   }) {
     return Movie(
@@ -98,6 +128,7 @@ class Movie {
       trailerUrl: trailerUrl ?? this.trailerUrl,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       howToWatch: howToWatch ?? this.howToWatch,
+      genre: genre ?? this.genre,
       enteredBy: enteredBy ?? this.enteredBy,
       enteredDate: enteredDate,
     );
