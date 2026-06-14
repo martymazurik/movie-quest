@@ -9,6 +9,8 @@ import 'name_prompt_screen.dart';
 
 enum _SortMode { recent, title, ourRating, externalRating, releaseYear }
 
+const String _kGenreClearSentinel = '__clear__';
+
 class MovieListScreen extends StatefulWidget {
   const MovieListScreen({super.key});
 
@@ -254,7 +256,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
             tooltip: _hideWatched ? 'Showing unwatched only' : 'Hide watched',
             onPressed: () => setState(() => _hideWatched = !_hideWatched),
           ),
-          PopupMenuButton<String?>(
+          PopupMenuButton<String>(
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -277,16 +279,18 @@ class _MovieListScreenState extends State<MovieListScreen> {
             tooltip: _genreFilter == null
                 ? 'Filter by genre'
                 : 'Genre: $_genreFilter',
-            initialValue: _genreFilter,
-            onSelected: (v) => setState(() => _genreFilter = v),
-            itemBuilder: (_) => <PopupMenuEntry<String?>>[
-              const PopupMenuItem<String?>(
-                value: null,
-                child: Text('All genres'),
+            initialValue: _genreFilter ?? _kGenreClearSentinel,
+            onSelected: (v) => setState(() {
+              _genreFilter = v == _kGenreClearSentinel ? null : v;
+            }),
+            itemBuilder: (_) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: _kGenreClearSentinel,
+                child: Text('Remove filter'),
               ),
               const PopupMenuDivider(),
               ...kImdbGenres.map(
-                (g) => PopupMenuItem<String?>(value: g, child: Text(g)),
+                (g) => PopupMenuItem<String>(value: g, child: Text(g)),
               ),
             ],
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/movie.dart';
 import '../services/movie_service.dart';
+import '../services/tmdb_service.dart';
 import '../services/user_service.dart';
 import '../widgets/star_rating.dart';
 
@@ -30,6 +31,9 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
   String? _howToWatchChoice;
   String? _genre;
   bool _saving = false;
+
+  bool _looking = false;
+  int _searchSeq = 0;
 
   static const _presetServices = ['Netflix', 'Prime', 'HBOMax'];
 
@@ -79,6 +83,76 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
     _thumbnailUrl.dispose();
     _howToWatchOther.dispose();
     super.dispose();
+  }
+
+  void _applyLookupResult(TmdbLookupResult result) {
+    setState(() {
+      if (_title.text.trim().isEmpty) _title.text = result.title;
+      if (_description.text.trim().isEmpty && result.description != null) {
+        _description.text = result.description!;
+      }
+      if (_releaseYear.text.trim().isEmpty && result.releaseYear != null) {
+        _releaseYear.text = result.releaseYear!.toString();
+      }
+      if (_externalRating.text.trim().isEmpty &&
+          result.externalRating != null) {
+        _externalRating.text = result.externalRating!.toStringAsFixed(1);
+      }
+      if (_actors.text.trim().isEmpty && result.actors.isNotEmpty) {
+        _actors.text = result.actors.join(', ');
+      }
+      if (_thumbnailUrl.text.trim().isEmpty && result.thumbnailUrl != null) {
+        _thumbnailUrl.text = result.thumbnailUrl!;
+      }
+      if (_trailerUrl.text.trim().isEmpty && result.trailerUrl != null) {
+        _trailerUrl.text = result.trailerUrl!;
+      }
+      if (_genre == null && result.genre != null) {
+        _genre = result.genre;
+      }
+    });
+  }
+
+  Future<void> _onHitSelected(TmdbSearchHit hit) async {
+    if (_looking) return;
+    setState(() => _looking = true);
+    try {
+      final result = await TmdbService.fetchDetails(id: hit.id, isTv: hit.isTv);
+      if (!mounted) return;
+      _applyLookupResult(result);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isTvSeries
+                ? 'Filled from TMDB (TV series).'
+                : 'Filled from TMDB.',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Auto-fill failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _looking = false);
+    }
+  }
+
+  Future<Iterable<TmdbSearchHit>> _searchOptions(String query) async {
+    final q = query.trim();
+    if (q.length < 2) return const Iterable.empty();
+    if (!TmdbService.isConfigured) return const Iterable.empty();
+    _searchSeq++;
+    final mySeq = _searchSeq;
+    await Future.delayed(const Duration(milliseconds: 250));
+    if (mySeq != _searchSeq) return const Iterable.empty();
+    try {
+      return await TmdbService.searchMulti(q);
+    } catch (_) {
+      return const Iterable.empty();
+    }
   }
 
   List<String> _splitCsv(String s) => s
@@ -207,6 +281,152 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (!_isEdit) ...[
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, size: 18),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Text(
+                            'Search TMDB and auto-fill',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        if (_looking)
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Autocomplete<TmdbSearchHit>(
+                      displayStringForOption: (h) =>
+                          '${h.title}${h.yearLabel}',
+                      optionsBuilder: (tev) => _searchOptions(tev.text),
+                      onSelected: _onHitSelected,
+                      fieldViewBuilder:
+                          (context, controller, focusNode, onSubmitted) {
+                        return TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: const InputDecoration(
+                            hintText: 'Start typing a title…',
+                            prefixIcon: Icon(Icons.search, size: 20),
+                            isDense: true,
+                            border: OutlineInputBorder(),
+                          ),
+                          onSubmitted: (_) => onSubmitted(),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(8),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxHeight: 320,
+                                maxWidth: 480,
+                              ),
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                padding: EdgeInsets.zero,
+                                itemCount: options.length,
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (_, i) {
+                                  final h = options.elementAt(i);
+                                  return InkWell(
+                                    onTap: () => onSelected(h),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 36,
+                                            height: 54,
+                                            child: h.posterUrl == null
+                                                ? Container(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .surfaceContainerHighest,
+                                                    child: const Icon(
+                                                      Icons.movie,
+                                                      size: 18,
+                                                    ),
+                                                  )
+                                                : Image.network(
+                                                    h.posterUrl!,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder:
+                                                        (_, __, ___) =>
+                                                            const Icon(
+                                                      Icons.movie,
+                                                      size: 18,
+                                                    ),
+                                                  ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${h.title}${h.yearLabel}',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  h.typeLabel,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             InputDecorator(
               decoration: const InputDecoration(
                 labelText: 'Watch date',
