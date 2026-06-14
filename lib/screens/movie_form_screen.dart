@@ -360,6 +360,7 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
                         return TextField(
                           controller: controller,
                           focusNode: focusNode,
+                          autofocus: true,
                           decoration: const InputDecoration(
                             hintText: 'Start typing a title…',
                             prefixIcon: Icon(Icons.search, size: 20),
