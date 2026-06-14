@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/movie.dart';
 import '../services/movie_service.dart';
+import '../services/omdb_service.dart';
 import '../services/tmdb_service.dart';
 import '../services/user_service.dart';
 import '../widgets/star_rating.dart';
@@ -110,6 +111,17 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
       if (_genre == null && result.genre != null) {
         _genre = result.genre;
       }
+      if (_howToWatchChoice == null && result.howToWatch != null) {
+        final name = result.howToWatch!;
+        if (_presetServices.contains(name)) {
+          _howToWatchChoice = name;
+        } else {
+          _howToWatchChoice = 'Other';
+          if (_howToWatchOther.text.trim().isEmpty) {
+            _howToWatchOther.text = name;
+          }
+        }
+      }
     });
   }
 
@@ -130,6 +142,17 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
+      if (result.imdbId != null && OmdbService.isConfigured) {
+        try {
+          final awards = await OmdbService.fetchTopAwards(result.imdbId!);
+          if (!mounted) return;
+          if (awards.isNotEmpty && _awards.text.trim().isEmpty) {
+            setState(() => _awards.text = awards.join(', '));
+          }
+        } catch (_) {
+          // Awards are best-effort; silently skip.
+        }
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

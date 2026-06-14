@@ -18,6 +18,8 @@ class TmdbLookupResult {
   final String? genre;
   final String? thumbnailUrl;
   final String? trailerUrl;
+  final String? howToWatch;
+  final String? imdbId;
   final bool isTvSeries;
 
   TmdbLookupResult({
@@ -29,6 +31,8 @@ class TmdbLookupResult {
     required this.genre,
     required this.thumbnailUrl,
     required this.trailerUrl,
+    required this.howToWatch,
+    required this.imdbId,
     required this.isTvSeries,
   });
 }
@@ -168,7 +172,8 @@ class TmdbService {
     final kind = isTv ? 'tv' : 'movie';
     final uri = Uri.parse(
       'https://api.themoviedb.org/3/$kind/$id'
-      '?api_key=$_kTmdbApiKey&append_to_response=videos,credits',
+      '?api_key=$_kTmdbApiKey'
+      '&append_to_response=videos,credits,watch/providers,external_ids',
     );
     final res = await http.get(uri);
     if (res.statusCode != 200) {
@@ -206,6 +211,14 @@ class TmdbService {
         .where((s) => s.isNotEmpty)
         .toList();
 
+    final providersByRegion =
+        (d['watch/providers']?['results'] as Map<String, dynamic>?) ??
+            const <String, dynamic>{};
+    final howToWatch = _pickHowToWatch(providersByRegion);
+
+    final imdbId = (d['imdb_id'] as String?) ??
+        (d['external_ids']?['imdb_id'] as String?);
+
     return TmdbLookupResult(
       title: title,
       description: description,
@@ -215,8 +228,54 @@ class TmdbService {
       genre: genre,
       thumbnailUrl: thumbnailUrl,
       trailerUrl: trailerUrl,
+      howToWatch: howToWatch,
+      imdbId: imdbId,
       isTvSeries: isTv,
     );
+  }
+
+  static String? _pickHowToWatch(Map<String, dynamic> providersByRegion) {
+    final us = providersByRegion['US'] as Map<String, dynamic>?;
+    if (us == null) return null;
+    final flatrate = (us['flatrate'] as List?) ?? const [];
+    if (flatrate.isEmpty) return null;
+    const presetAliases = <String, String>{
+      'Netflix': 'Netflix',
+      'Netflix Standard with Ads': 'Netflix',
+      'Amazon Prime Video': 'Prime',
+      'Amazon Prime Video with Ads': 'Prime',
+      'Max': 'HBOMax',
+      'HBO Max': 'HBOMax',
+      'Max Amazon Channel': 'HBOMax',
+    };
+    for (final p in flatrate) {
+      final name = (p as Map<String, dynamic>)['provider_name']?.toString();
+      if (name == null) continue;
+      final mapped = presetAliases[name];
+      if (mapped != null) return mapped;
+    }
+    for (final p in flatrate) {
+      final name = (p as Map<String, dynamic>)['provider_name']?.toString();
+      if (name == null || name.isEmpty) continue;
+      return _cleanProviderName(name);
+    }
+    return null;
+  }
+
+  static String _cleanProviderName(String name) {
+    const tidy = <String, String>{
+      'Apple TV Plus': 'Apple TV+',
+      'Apple TV+': 'Apple TV+',
+      'Paramount Plus': 'Paramount+',
+      'Paramount+': 'Paramount+',
+      'Paramount+ Apple TV Channel': 'Paramount+',
+      'Paramount Plus Apple TV Channel': 'Paramount+',
+      'Disney Plus': 'Disney+',
+      'Disney+': 'Disney+',
+      'Peacock Premium': 'Peacock',
+      'Peacock Premium Plus': 'Peacock',
+    };
+    return tidy[name] ?? name;
   }
 
   static String? _pickTrailer(List videos) {
